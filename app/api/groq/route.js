@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import "dotenv/config";
 
 // also for teammates: to use this, you gotta go to https://console.groq.com/keys and create a key (maybe might have to make an account too) but that's for this llm because it's free
+// also add that api key to a private local file .env (im assuming you guys already know this but im adding it for my sake for documentation)
 
 {
   /* so for the purpose of documentation and all we'll have our request json be formatted in this way (from other pages to this):
@@ -40,7 +41,26 @@ export async function POST(req) {
       },
     ],
     model: "llama3-8b-8192",
+    stream: true,
   });
 
-  return NextResponse.json({ message: completion.choices[0].message.content });
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      try {
+        for await (const chunk of completion) {
+          const content = chunk.choices[0]?.delta.content;
+          if (content) {
+            const text = encoder.encode(content);
+            controller.enqueue(text);
+          }
+        }
+      } catch (err) {
+        controller.error(err);
+      } finally {
+        controller.close;
+      }
+    },
+  });
+  return NextResponse(stream);
 }
