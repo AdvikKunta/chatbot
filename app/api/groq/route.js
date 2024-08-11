@@ -26,20 +26,18 @@ export async function POST(req) {
   console.log("groq llama POST");
 
   const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY });
-  const data = await req.json();
+  const userMessages = await req.json(); 
+
+  const conversationHistory = [
+    {
+      role: "system",
+      content: "You are a chatbot that assists customers with summer vacation.",
+    },
+    ...userMessages,
+  ];
+
   const completion = await groq.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a chatbot that assists customers for a certain company.",
-      },
-      {
-        role: "user",
-        content:
-          "Hi I need help with a certain aspect of your company's services.",
-      },
-    ],
+    messages: conversationHistory,
     model: "llama3-8b-8192",
     stream: true,
   });
@@ -62,5 +60,8 @@ export async function POST(req) {
       }
     },
   });
-  return NextResponse(stream);
+  
+  return new Response(stream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }
